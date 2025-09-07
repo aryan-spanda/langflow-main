@@ -1,0 +1,96 @@
+# Production environment overrides
+app:
+  environment: "production"
+
+# Frontend configuration for production
+frontend:
+  replicaCount: 3
+  image:
+    tag: "frontend-latest"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 250m
+      memory: 512Mi
+  env:
+    NODE_ENV: "production"
+    VITE_API_URL: "http://langflow-backend-prod:80"
+    VITE_WS_URL: "ws://langflow-backend-prod:80"
+
+# Backend configuration for production
+backend:
+  replicaCount: 3
+  image:
+    tag: "backend-latest"
+  resources:
+    limits:
+      cpu: 1
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  env:
+    LANGFLOW_LOG_LEVEL: "WARNING"
+    LANGFLOW_DATABASE_URL: "sqlite:///./langflow-prod.db"
+
+# Enable ingress for production
+ingress:
+  enabled: true
+  className: "nginx"
+  host: "langflow.yourdomain.com"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-prod"
+    nginx.ingress.kubernetes.io/rate-limit: "100"
+  tls:
+    - secretName: langflow-prod-tls
+      hosts:
+        - langflow.yourdomain.com
+
+# Enable autoscaling in production
+autoscaling:
+  enabled: true
+
+frontend:
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 60
+
+backend:
+  autoscaling:
+    enabled: true
+    minReplicas: 3
+    maxReplicas: 15
+    targetCPUUtilizationPercentage: 65
+
+# Full resource requirements for production
+persistence:
+  size: 20Gi
+  storageClass: "fast-ssd"
+
+# Environment variables
+env:
+  LOG_LEVEL: warning
+
+# Enhanced security for production
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+  fsGroupChangePolicy: "OnRootMismatch"
+
+networkPolicy:
+  enabled: true
+  ingress:
+    allowFromSameNamespace: false
+    customRules:
+      - description: "Allow traffic only from ingress"
+        fromNamespaces:
+          - labels:
+              name: ingress-nginx

@@ -1,0 +1,293 @@
+# =====================================================================
+# Platform Requirements for CI/CD Onboarding and Infrastructure
+# =====================================================================
+# This file declares the application's infrastructure needs, target
+# environments, and Helm chart location. It is used by the automated
+# onboarding script to generate ArgoCD deployment manifests.
+# =====================================================================
+
+# Section 1: Application Identity
+# NEED TO SPECIFY A PRODUCTION/DEVELOPMENT BRANCH HERE
+# ---------------------------------------------------------------------
+app:
+  name: "langflow"
+  repoURL: "https://github.com/aryan-spanda/langflow-main.git"
+  chartPath: "deploy/helm"
+  type: "fullstack"
+  team: "ai-team"
+  # TENANT CONFIGURATION - REQUIRED FOR MULTI-TENANT DEPLOYMENTS
+  tenant: "langflow"  # Maps to ArgoCD project and tenant namespaces
+
+# Section 1.1: Microservices Configuration (Auto-Discovery)
+# ---------------------------------------------------------------------
+# The platform will automatically discover microservices by scanning src/ directory
+# for subdirectories containing Dockerfiles. You can override this behavior by 
+# explicitly defining microservices below:
+# 
+microservices:
+  - name: "frontend"
+    dockerfile: "src/frontend/Dockerfile"
+    port: 3000
+  - name: "backend"  
+    dockerfile: "src/backend/Dockerfile"
+    port: 7860
+#
+# If not specified, auto-discovery will find all src/*/Dockerfile patterns
+# Auto-discovery is recommended for most use cases
+  
+# Section 1.1: Container Registry Configuration
+# ---------------------------------------------------------------------
+container:
+  registry: "docker.io"
+  organization: "aryanpola"
+  image: "langflow-application" #docker repo name
+
+# Section 2.1: Target Environments
+# ---------------------------------------------------------------------
+environments:
+  # Development Environment - Auto-deploys from testing/develop branches
+  development:
+    enabled: true
+    namespace: "langflow-dev"
+    branches: 
+      - "testing"
+      - "develop"
+    
+    # ArgoCD Application Config
+    argocd:
+      project: "langflow"
+      targetRevision: "HEAD"
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+          
+    # Helm Values Overrides
+    values:
+      app:
+        environment: "development"
+      ingress:
+        enabled: true
+        host: "langflow-dev.platform.local"
+      resources:
+        frontend:
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+          requests:
+            cpu: "200m"
+            memory: "512Mi"
+        backend:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+
+  # Staging Environment - Manual deployment from staging branch
+  staging:
+    enabled: true
+    namespace: "langflow-staging"
+    branches: 
+      - "staging"
+    
+    # ArgoCD Application Config
+    argocd:
+      project: "langflow"
+      targetRevision: "HEAD"
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: false
+          
+    # Helm Values Overrides
+    values:
+      app:
+        environment: "staging"
+      ingress:
+        enabled: true
+        host: "langflow-staging.platform.local"
+      resources:
+        frontend:
+          limits:
+            cpu: "750m"
+            memory: "1.5Gi"
+          requests:
+            cpu: "300m"
+            memory: "768Mi"
+        backend:
+          limits:
+            cpu: "1.5"
+            memory: "3Gi"
+          requests:
+            cpu: "750m"
+            memory: "1.5Gi"
+
+  # Production Environment - Manual deployment from main branch
+  production:
+    enabled: false  # Disabled initially, enable when ready for production
+    namespace: "langflow-prod"
+    branches: 
+      - "main"
+    
+    # ArgoCD Application Config
+    argocd:
+      project: "langflow"
+      targetRevision: "HEAD"
+      syncPolicy:
+        automated:
+          prune: false
+          selfHeal: false
+          
+    # Helm Values Overrides
+    values:
+      app:
+        environment: "production"
+      ingress:
+        enabled: true
+        host: "langflow.yourdomain.com"
+      resources:
+        frontend:
+          limits:
+            cpu: "1"
+            memory: "2Gi"
+          requests:
+            cpu: "500m"
+            memory: "1Gi"
+        backend:
+          limits:
+            cpu: "2"
+            memory: "4Gi"
+          requests:
+            cpu: "1"
+            memory: "2Gi"
+
+# Section 3: CI/CD Configuration
+# ---------------------------------------------------------------------
+cicd:
+  # Deployment Automation
+  auto_deploy:
+    enabled: true
+    branches:
+      - "testing"
+      - "develop"
+      - "staging"
+      
+  # Build Configuration
+  build:
+    # Use platform's automatic microservice discovery
+    microservices_auto_discovery: true
+    
+    # Source directory for microservices
+    source_directory: "src/"
+    
+    # Container Registry Credentials (GitHub Secrets)
+    registry_credentials:
+      username_secret: "DOCKER_USERNAME"
+      password_secret: "DOCKER_PASSWORD"
+    
+    # Tagging Strategy
+    tagging:
+      format: "branch-commit"  # Options: branch-commit, semantic, latest
+      
+  # Testing Configuration
+  testing:
+    enabled: true
+    parallel_execution: true
+    fail_fast: false
+    
+    # Test Coverage Requirements
+    coverage:
+      enabled: true
+      minimum_threshold: 70
+      
+  # Security Scanning
+  security:
+    container_scanning: true
+    dependency_scanning: true
+    
+  # GitOps Integration
+  gitops:
+    enabled: true
+    config_repo: "https://github.com/aryan-spanda/Spanda-config.git"
+    values_path: "applications/langflow/values"
+    auto_update_dev: true
+    auto_update_staging: false
+    auto_update_production: false
+
+# Section 4: Infrastructure Requirements
+# ---------------------------------------------------------------------
+infrastructure:
+  # Resource Requirements
+  compute:
+    min_cpu: "1"
+    min_memory: "2Gi"
+    max_cpu: "4"
+    max_memory: "8Gi"
+    
+  # Storage Requirements  
+  storage:
+    persistent_volumes:
+      - name: "langflow-data"
+        size: "10Gi"
+        access_mode: "ReadWriteOnce"
+        storage_class: "fast-ssd"
+        
+  # Network Requirements
+  networking:
+    ingress_required: true
+    load_balancer: false
+    service_mesh: false
+    
+  # External Dependencies
+  dependencies:
+    databases: []
+    message_queues: []
+    external_apis: []
+    
+# Section 5: Monitoring & Observability
+# ---------------------------------------------------------------------
+observability:
+  # Metrics Collection
+  metrics:
+    enabled: true
+    prometheus: true
+    custom_metrics: []
+    
+  # Logging
+  logging:
+    enabled: true
+    level: "info"
+    structured: true
+    
+  # Health Checks
+  health_checks:
+    liveness_probe: true
+    readiness_probe: true
+    startup_probe: true
+    
+  # Alerts
+  alerting:
+    enabled: true
+    slack_webhook_secret: "SLACK_WEBHOOK_URL"
+    
+# Section 6: Security Configuration
+# ---------------------------------------------------------------------
+security:
+  # Pod Security
+  pod_security:
+    run_as_non_root: true
+    read_only_root_filesystem: false
+    allow_privilege_escalation: false
+    
+  # Network Policies
+  network_policies:
+    enabled: true
+    ingress_rules: []
+    egress_rules: []
+    
+  # Secrets Management
+  secrets:
+    external_secrets: false
+    vault_integration: false

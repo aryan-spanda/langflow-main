@@ -1,0 +1,75 @@
+# Staging environment overrides
+app:
+  environment: "staging"
+
+# Frontend configuration for staging
+frontend:
+  replicaCount: 2
+  image:
+    tag: "frontend-staging"
+  resources:
+    limits:
+      cpu: 400m
+      memory: 768Mi
+    requests:
+      cpu: 200m
+      memory: 384Mi
+  env:
+    NODE_ENV: "production"
+    VITE_API_URL: "http://langflow-backend-staging:80"
+    VITE_WS_URL: "ws://langflow-backend-staging:80"
+
+# Backend configuration for staging
+backend:
+  replicaCount: 2
+  image:
+    tag: "backend-staging"
+  resources:
+    limits:
+      cpu: 750m
+      memory: 1.5Gi
+    requests:
+      cpu: 375m
+      memory: 768Mi
+  env:
+    LANGFLOW_LOG_LEVEL: "INFO"
+    LANGFLOW_DATABASE_URL: "sqlite:///./langflow-staging.db"
+
+# Enable ingress for staging
+ingress:
+  enabled: true
+  className: "nginx"
+  host: "langflow-staging.platform.local"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+    cert-manager.io/cluster-issuer: "letsencrypt-staging"
+  tls:
+    - secretName: langflow-staging-tls
+      hosts:
+        - langflow-staging.platform.local
+
+# Enable autoscaling in staging
+autoscaling:
+  enabled: true
+
+frontend:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 4
+
+backend:
+  autoscaling:
+    enabled: true
+    minReplicas: 2
+    maxReplicas: 6
+
+# Standard resource requirements for staging
+persistence:
+  size: 8Gi
+
+# Environment variables
+env:
+  LOG_LEVEL: info

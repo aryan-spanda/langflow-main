@@ -1,0 +1,374 @@
+# Universal CI/CD Workflow Template for Microservices
+# This template dynamically reads configuration from platform-requirements.yml
+# Works for applications with any number of microservices and any configuration
+# Optimized for testing branch deployment
+
+name: Build and Deploy Langflow Microservices
+
+on:
+  push:
+    branches: [ testing, develop, staging ]  # Prioritize testing branch
+  pull_request:
+    branches: [ testing ]  # PR target changed to testing
+
+# Add permissions for the GITHUB_TOKEN
+permissions:
+  contents: write          # Allow writing to repository (for updating Helm values)
+  packages: write          # Allow pushing to container registry
+  security-events: write   # Allow uploading security scan results
+  actions: read           # Allow reading workflow artifacts
+  checks: write           # Allow writing check results
+
+env:
+  # Default values - will be overridden by platform-requirements.yml
+  REGISTRY: docker.io
+  IMAGE_NAMESPACE: ""
+  SOURCE_DIRECTORY: src/
+  CONFIG_FILE: platform-requirements.yml
+
+jobs:
+  # Job 1: Read configuration from platform-requirements.yml
+  config:
+    runs-on: ubuntu-latest
+    outputs:
+      app_name: ${{ steps.read-config.outputs.app_name }}
+      registry_host: ${{ steps.read-config.outputs.registry_host }}
+      image_namespace: ${{ steps.read-config.outputs.image_namespace }}
+      image_name: ${{ steps.read-config.outputs.image_name }}
+      image_repository: ${{ steps.read-config.outputs.image_repository }}
+      source_directory: ${{ steps.read-config.outputs.source_directory }}
+      deployment_branches: ${{ steps.read-config.outputs.deployment_branches }}
+      registry_username_secret: ${{ steps.read-config.outputs.registry_username_secret }}
+      registry_password_secret: ${{ steps.read-config.outputs.registry_password_secret }}
+      tagging_format: ${{ steps.read-config.outputs.tagging_format }}
+      should_deploy: ${{ steps.check-deployment.outputs.should_deploy }}
+      target_environment: ${{ steps.check-deployment.outputs.target_environment }}
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Install yq
+      run: |
+        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        sudo chmod +x /usr/local/bin/yq
+        
+    - name: Read platform requirements
+      id: read-config
+      run: |
+        # Read CI/CD configuration from platform-requirements.yml
+        app_name=$(yq e '.app.name // "langflow"' $CONFIG_FILE)
+        registry_host=$(yq e '.cicd.registry_host // .container.registry // "docker.io"' $CONFIG_FILE)
+        image_namespace=$(yq e '.cicd.image_namespace // .container.organization // env(GITHUB_REPOSITORY_OWNER)' $CONFIG_FILE)
+        image_name=$(yq e '.cicd.image_name // .container.image // .app.name // "langflow-application"' $CONFIG_FILE)
+        # Construct full repository path
+        image_repository="$image_namespace/$image_name"
+        source_directory=$(yq e '.cicd.source_directory // "src/"' $CONFIG_FILE)
+        deployment_branches=$(yq e '.cicd.deployment_branches // ["testing", "staging"]' $CONFIG_FILE | yq e '. | @json' -)
+        registry_username_secret=$(yq e '.cicd.registry_credentials.username_secret // "DOCKER_USERNAME"' $CONFIG_FILE)
+        registry_password_secret=$(yq e '.cicd.registry_credentials.password_secret // "DOCKER_PASSWORD"' $CONFIG_FILE)
+        tagging_format=$(yq e '.cicd.tagging_strategy.format // "{service}-{branch}-{sha}"' $CONFIG_FILE)
+        
+        echo "app_name=$app_name" >> $GITHUB_OUTPUT
+        echo "registry_host=$registry_host" >> $GITHUB_OUTPUT
+        echo "image_namespace=$image_namespace" >> $GITHUB_OUTPUT
+        echo "image_name=$image_name" >> $GITHUB_OUTPUT
+        echo "image_repository=$image_repository" >> $GITHUB_OUTPUT
+        echo "source_directory=$source_directory" >> $GITHUB_OUTPUT
+        echo "deployment_branches=$deployment_branches" >> $GITHUB_OUTPUT
+        echo "registry_username_secret=$registry_username_secret" >> $GITHUB_OUTPUT
+        echo "registry_password_secret=$registry_password_secret" >> $GITHUB_OUTPUT
+        echo "tagging_format=$tagging_format" >> $GITHUB_OUTPUT
+        
+        echo "Configuration loaded:"
+        echo "  Application: $app_name"
+        echo "  Registry: $registry_host"
+        echo "  Namespace: $image_namespace"
+        echo "  Image Name: $image_name"
+        echo "  Image Repository: $image_repository"
+        echo "  Full Image Path: $registry_host/$image_repository"
+        echo "  Source Dir: $source_directory"
+        echo "  Deployment Branches: $deployment_branches"
+        echo "  Tagging Format: $tagging_format"
+        
+    - name: Check deployment conditions
+      id: check-deployment
+      run: |
+        # Check if current branch should trigger deployment
+        current_branch=${GITHUB_REF#refs/heads/}
+        deployment_branches='${{ steps.read-config.outputs.deployment_branches }}'
+        
+        should_deploy="false"
+        target_environment=""
+        
+        # Check if current branch is in deployment branches
+        if echo "$deployment_branches" | jq -r '.[]' | grep -q "^$current_branch$"; then
+          should_deploy="true"
+          
+          # Map branch to environment
+          case "$current_branch" in
+            "testing"|"develop")
+              target_environment="development"
+              ;;
+            "staging")
+              target_environment="staging"
+              ;;
+            "main"|"master")
+              target_environment="production"
+              ;;
+            *)
+              target_environment="development"
+              ;;
+          esac
+        fi
+        
+        echo "should_deploy=$should_deploy" >> $GITHUB_OUTPUT
+        echo "target_environment=$target_environment" >> $GITHUB_OUTPUT
+        echo "Current branch: $current_branch"
+        echo "Should deploy: $should_deploy"
+        echo "Target environment: $target_environment"
+
+  # Job 2: Run tests
+  test:
+    runs-on: ubuntu-latest
+    needs: config
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js for frontend tests
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: src/frontend/package-lock.json
+
+    - name: Set up Python for backend tests
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install frontend dependencies
+      run: |
+        cd src/frontend
+        npm ci
+
+    - name: Run frontend tests
+      run: |
+        cd src/frontend
+        npm test -- --coverage --watchAll=false
+
+    - name: Install backend dependencies
+      run: |
+        cd src/backend
+        python -m pip install --upgrade pip
+        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+        pip install pytest pytest-cov
+
+    - name: Run backend tests
+      run: |
+        cd src/backend
+        pytest --cov=. --cov-report=xml --cov-fail-under=70
+
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        files: src/frontend/coverage/lcov.info,src/backend/coverage.xml
+        fail_ci_if_error: false
+
+  # Job 3: Build and push Docker images
+  build:
+    runs-on: ubuntu-latest
+    needs: [config, test]
+    strategy:
+      matrix:
+        service: [frontend, backend]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Login to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ needs.config.outputs.registry_host }}
+        username: ${{ secrets[needs.config.outputs.registry_username_secret] }}
+        password: ${{ secrets[needs.config.outputs.registry_password_secret] }}
+
+    - name: Generate image tags
+      id: meta
+      run: |
+        service="${{ matrix.service }}"
+        branch=${GITHUB_REF#refs/heads/}
+        sha=${GITHUB_SHA::8}
+        
+        # Generate tag based on configured format
+        case "${{ needs.config.outputs.tagging_format }}" in
+          *"{service}"*"{branch}"*"{sha}"*)
+            tag="${service}-${branch}-${sha}"
+            ;;
+          *"{service}"*"{sha}"*)
+            tag="${service}-${sha}"
+            ;;
+          *"{service}"*"{branch}"*)
+            tag="${service}-${branch}"
+            ;;
+          *)
+            tag="${service}-${sha}"
+            ;;
+        esac
+        
+        registry="${{ needs.config.outputs.registry_host }}"
+        repository="${{ needs.config.outputs.image_repository }}"
+        full_image_name="$registry/$repository:$tag"
+        
+        echo "service=$service" >> $GITHUB_OUTPUT
+        echo "tag=$tag" >> $GITHUB_OUTPUT
+        echo "full_image_name=$full_image_name" >> $GITHUB_OUTPUT
+        
+        echo "Service: $service"
+        echo "Tag: $tag"
+        echo "Full image: $full_image_name"
+
+    - name: Build and push Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: src/${{ matrix.service }}/Dockerfile
+        push: true
+        tags: ${{ steps.meta.outputs.full_image_name }}
+        platforms: linux/amd64,linux/arm64
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+
+    - name: Output image information
+      run: |
+        echo "Built and pushed: ${{ steps.meta.outputs.full_image_name }}"
+        echo "service=${{ steps.meta.outputs.service }}" >> build-info-${{ matrix.service }}.txt
+        echo "tag=${{ steps.meta.outputs.tag }}" >> build-info-${{ matrix.service }}.txt
+        echo "image=${{ steps.meta.outputs.full_image_name }}" >> build-info-${{ matrix.service }}.txt
+
+    - name: Upload build info
+      uses: actions/upload-artifact@v3
+      with:
+        name: build-info-${{ matrix.service }}
+        path: build-info-${{ matrix.service }}.txt
+
+  # Job 4: Deploy to environment
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [config, build]
+    if: needs.config.outputs.should_deploy == 'true'
+    steps:
+    - name: Checkout config repository
+      uses: actions/checkout@v4
+      with:
+        repository: aryan-spanda/Spanda-config
+        token: ${{ secrets.GITHUB_TOKEN }}
+        path: config-repo
+
+    - name: Download build info
+      uses: actions/download-artifact@v3
+      with:
+        pattern: build-info-*
+        merge-multiple: true
+
+    - name: Install yq
+      run: |
+        sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
+        sudo chmod +x /usr/local/bin/yq
+
+    - name: Update Helm values with new image tags
+      run: |
+        app_name="${{ needs.config.outputs.app_name }}"
+        target_env="${{ needs.config.outputs.target_environment }}"
+        
+        # Create application directory if it doesn't exist
+        mkdir -p config-repo/applications/$app_name
+        
+        # Determine values file based on environment
+        case "$target_env" in
+          "development")
+            values_file="config-repo/applications/$app_name/values-dev.yaml"
+            ;;
+          "staging")
+            values_file="config-repo/applications/$app_name/values-staging.yaml"
+            ;;
+          "production")
+            values_file="config-repo/applications/$app_name/values-production.yaml"
+            ;;
+          *)
+            values_file="config-repo/applications/$app_name/values-dev.yaml"
+            ;;
+        esac
+        
+        # Copy base values if environment-specific file doesn't exist
+        if [ ! -f "$values_file" ]; then
+          cp deploy/helm/values-${target_env}.yaml "$values_file" 2>/dev/null || \
+          cp deploy/helm/values.yaml "$values_file"
+        fi
+        
+        # Update image tags for each service
+        for service_file in build-info-*.txt; do
+          if [ -f "$service_file" ]; then
+            source "$service_file"
+            echo "Updating $service with tag: $tag"
+            
+            # Update the image tag in values file
+            yq e ".${service}.image.tag = \"$tag\"" -i "$values_file"
+          fi
+        done
+        
+        echo "Updated values file: $values_file"
+        cat "$values_file"
+
+    - name: Commit and push changes
+      run: |
+        cd config-repo
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add .
+        
+        if git diff --staged --quiet; then
+          echo "No changes to commit"
+        else
+          git commit -m "🚀 Deploy ${{ needs.config.outputs.app_name }} to ${{ needs.config.outputs.target_environment }}
+          
+          Updated image tags:
+          $(cat ../build-info-*.txt 2>/dev/null | grep -E '^(service|tag)=' | sed 's/^/  - /')"
+          git push
+          echo "Changes pushed to config repository"
+        fi
+
+  # Job 5: Security scanning
+  security:
+    runs-on: ubuntu-latest
+    needs: [config, build]
+    strategy:
+      matrix:
+        service: [frontend, backend]
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Download build info
+      uses: actions/download-artifact@v3
+      with:
+        name: build-info-${{ matrix.service }}
+
+    - name: Load build info
+      run: source build-info-${{ matrix.service }}.txt
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.image }}
+        format: 'sarif'
+        output: 'trivy-results-${{ matrix.service }}.sarif'
+
+    - name: Upload Trivy scan results to GitHub Security tab
+      uses: github/codeql-action/upload-sarif@v2
+      if: always()
+      with:
+        sarif_file: 'trivy-results-${{ matrix.service }}.sarif'

@@ -1,0 +1,66 @@
+# Development environment overrides
+app:
+  environment: "development"
+
+# Frontend configuration for development
+frontend:
+  replicaCount: 1
+  image:
+    tag: "frontend-dev"
+  resources:
+    limits:
+      cpu: 300m
+      memory: 512Mi
+    requests:
+      cpu: 100m
+      memory: 256Mi
+  env:
+    NODE_ENV: "development"
+    VITE_API_URL: "http://langflow-backend-dev:80"
+    VITE_WS_URL: "ws://langflow-backend-dev:80"
+
+# Backend configuration for development
+backend:
+  replicaCount: 1
+  image:
+    tag: "backend-dev"
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  env:
+    LANGFLOW_LOG_LEVEL: "DEBUG"
+    LANGFLOW_DATABASE_URL: "sqlite:///./langflow-dev.db"
+
+# Enable ingress for development
+ingress:
+  enabled: true
+  className: "nginx"
+  host: "langflow-dev.platform.local"
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+
+# Disable autoscaling in development
+autoscaling:
+  enabled: false
+
+frontend:
+  autoscaling:
+    enabled: false
+
+backend:
+  autoscaling:
+    enabled: false
+
+# Reduced resource requirements for development
+persistence:
+  size: 5Gi
+
+# Environment variables
+env:
+  LOG_LEVEL: debug

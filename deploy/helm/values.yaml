@@ -1,0 +1,210 @@
+# Base values - environment agnostic defaults
+
+# Microservices architecture: separate pods for frontend and backend
+
+# Application configuration
+
+app:
+  name: langflow
+  version: "1.0.0"
+  # Deployment mode: "microservices" for separate pods
+  deploymentMode: "microservices"
+
+# Frontend service configuration (React + NGINX)
+frontend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: aryanpola/langflow-application
+    tag: "frontend-latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 3000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 1Gi
+    requests:
+      cpu: 200m
+      memory: 512Mi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 3
+    targetCPUUtilizationPercentage: 70
+  env:
+    VITE_API_URL: "http://langflow-backend:80"
+    VITE_WS_URL: "ws://langflow-backend:80"
+    NODE_ENV: "production"
+
+# Backend service configuration (Python/FastAPI)
+backend:
+  enabled: true
+  replicaCount: 1
+  image:
+    repository: aryanpola/langflow-application
+    tag: "backend-latest"
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 7860
+  resources:
+    limits:
+      cpu: 1
+      memory: 2Gi
+    requests:
+      cpu: 500m
+      memory: 1Gi
+  autoscaling:
+    enabled: true
+    minReplicas: 1
+    maxReplicas: 5
+    targetCPUUtilizationPercentage: 75
+  env:
+    LANGFLOW_HOST: "0.0.0.0"
+    LANGFLOW_PORT: "7860"
+    LANGFLOW_LOG_LEVEL: "INFO"
+    LANGFLOW_DATABASE_URL: "sqlite:///./langflow.db"
+    PYTHONPATH: "/app"
+
+# Legacy single container configuration (kept for compatibility)
+replicaCount: 1
+image:
+  repository: docker.io/aryanpola/langflow-application
+  tag: "latest"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1001
+  fsGroup: 1001
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+    - ALL
+  readOnlyRootFilesystem: false  # Allow writes for application data
+  runAsNonRoot: true
+  runAsUser: 1001
+
+service:
+  type: ClusterIP
+  port: 80
+  targetPort: 7860
+
+# Ingress disabled by default - enabled per environment
+ingress:
+  enabled: false
+  className: ""
+  host: ""
+  annotations: {}
+  tls: []
+
+resources:
+  limits:
+    cpu: 1
+    memory: 2Gi
+  requests:
+    cpu: 500m
+    memory: 1Gi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 5
+  targetCPUUtilizationPercentage: 80
+
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Environment variables - populated by overlays
+env:
+  LOG_LEVEL: info
+  LANGFLOW_HOST: "0.0.0.0"
+  LANGFLOW_PORT: "7860"
+
+# Health check configuration
+probes:
+  liveness:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 60
+    periodSeconds: 30
+    timeoutSeconds: 10
+    failureThreshold: 3
+  readiness:
+    enabled: true
+    path: /health
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 5
+    failureThreshold: 3
+
+# Monitoring
+metrics:
+  enabled: true
+  path: /metrics
+  port: 7860
+
+# Persistent storage for Langflow data
+persistence:
+  enabled: true
+  storageClass: ""
+  accessMode: ReadWriteOnce
+  size: 10Gi
+  annotations: {}
+
+# Network Policy Configuration - Application-Specific Traffic Rules
+networkPolicy:
+  enabled: true # Set to false to disable network policies for this app
+  # INGRESS - What traffic is allowed TO this application
+  ingress:
+    # Allow traffic from the ingress controller (nginx)
+    allowFromIngressController: true
+    # Allow monitoring systems to scrape metrics
+    allowFromMonitoring: true
+    # Allow traffic from other pods in the same namespace
+    allowFromSameNamespace: true
+    # Custom ingress rules for specific use cases
+    customRules: []
+
+  # EGRESS - What traffic is allowed FROM this application
+  egress:
+    # Allow DNS resolution (required for external service calls)
+    allowDNS: true
+    # Allow HTTPS traffic to external APIs/services (for AI model APIs)
+    allowToInternet: true
+    # Allow HTTP traffic to external services (for some AI APIs)
+    allowHTTP: true
+    # Allow connections to database services
+    allowToDatabase: false
+    databaseServices: []
+    # Allow traffic to other internal microservices
+    allowToOtherServices: true
+    internalServices: []
+    # Custom egress rules for AI model APIs
+    customRules:
+      - description: "Allow traffic to OpenAI API"
+        toIPBlocks:
+          - cidr: "0.0.0.0/0"  # Allow all external traffic for AI APIs
+        ports:
+          - port: 443
+            protocol: TCP
+          - port: 80
+            protocol: TCP
