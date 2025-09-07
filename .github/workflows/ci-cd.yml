@@ -62,10 +62,10 @@ jobs:
         image_name=$(yq e '.cicd.image_name // .container.image // .app.name // "langflow"' $CONFIG_FILE)
         # Construct full repository path
         image_repository="$image_namespace/$image_name"
-        source_directory=$(yq e '.cicd.source_directory // "src/"' $CONFIG_FILE)
+        source_directory=$(yq e '.cicd.source_directory // .cicd.build.source_directory // "src/"' $CONFIG_FILE)
         deployment_branches=$(yq e '.cicd.deployment_branches // ["testing", "staging"]' $CONFIG_FILE | yq e '. | @json' -)
-        registry_username_secret=$(yq e '.cicd.registry_credentials.username_secret // "DOCKER_USERNAME"' $CONFIG_FILE)
-        registry_password_secret=$(yq e '.cicd.registry_credentials.password_secret // "DOCKER_PASSWORD"' $CONFIG_FILE)
+        registry_username_secret=$(yq e '.cicd.build.registry_credentials.username_secret // .cicd.registry_credentials.username_secret // "DOCKER_USERNAME"' $CONFIG_FILE)
+        registry_password_secret=$(yq e '.cicd.build.registry_credentials.password_secret // .cicd.registry_credentials.password_secret // "DOCKER_PASSWORD"' $CONFIG_FILE)
         tagging_format=$(yq e '.cicd.tagging_strategy.format // "{service}-{branch}-{sha}"' $CONFIG_FILE)
         
         echo "app_name=$app_name" >> $GITHUB_OUTPUT
