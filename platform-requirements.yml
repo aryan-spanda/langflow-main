@@ -184,8 +184,8 @@ cicd:
     
     # Container Registry Credentials (GitHub Secrets)
     registry_credentials:
-      username_secret: "DOCKER_USERNAME"
-      password_secret: "DOCKER_PASSWORD"
+      username_secret: "DOCKERHUB_USERNAME"
+      password_secret: "DOCKERHUB_TOKEN"
     
     # Tagging Strategy
     tagging:
