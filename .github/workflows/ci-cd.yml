@@ -250,7 +250,7 @@ jobs:
         echo "image=${{ steps.meta.outputs.full_image_name }}" >> build-info-${{ matrix.service }}.txt
 
     - name: Upload build info
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: build-info-${{ matrix.service }}
         path: build-info-${{ matrix.service }}.txt
