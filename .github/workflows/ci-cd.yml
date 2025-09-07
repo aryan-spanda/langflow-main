@@ -170,7 +170,7 @@ jobs:
         pytest --cov=. --cov-report=xml --cov-fail-under=70
 
     - name: Upload coverage reports
-      uses: codecov/codecov-action@v3
+      uses: codecov/codecov-action@v5
       with:
         files: src/frontend/coverage/lcov.info,src/backend/coverage.xml
         fail_ci_if_error: false
