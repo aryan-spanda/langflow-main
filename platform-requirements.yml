@@ -38,7 +38,7 @@ microservices:
 # Section 1.1: Container Registry Configuration
 # ---------------------------------------------------------------------
 container:
-  registry: "docker.io"
+  registry: ""  # Empty for Docker Hub (docker.io is default)
   organization: "aryanpola"
   image: "langflow" #docker repo name
 
