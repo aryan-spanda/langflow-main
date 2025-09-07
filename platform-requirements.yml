@@ -40,7 +40,7 @@ microservices:
 container:
   registry: "docker.io"
   organization: "aryanpola"
-  image: "langflow-application" #docker repo name
+  image: "langflow" #docker repo name
 
 # Section 2.1: Target Environments
 # ---------------------------------------------------------------------

@@ -15,7 +15,7 @@ frontend:
   enabled: true
   replicaCount: 1
   image:
-    repository: aryanpola/langflow-application
+    repository: aryanpola/langflow
     tag: "frontend-latest"
     pullPolicy: IfNotPresent
   service:
@@ -44,7 +44,7 @@ backend:
   enabled: true
   replicaCount: 1
   image:
-    repository: aryanpola/langflow-application
+    repository: aryanpola/langflow
     tag: "backend-latest"
     pullPolicy: IfNotPresent
   service:
@@ -73,7 +73,7 @@ backend:
 # Legacy single container configuration (kept for compatibility)
 replicaCount: 1
 image:
-  repository: docker.io/aryanpola/langflow-application
+  repository: docker.io/aryanpola/langflow
   tag: "latest"
   pullPolicy: IfNotPresent
 

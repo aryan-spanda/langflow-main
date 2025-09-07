@@ -59,7 +59,7 @@ jobs:
         app_name=$(yq e '.app.name // "langflow"' $CONFIG_FILE)
         registry_host=$(yq e '.cicd.registry_host // .container.registry // "docker.io"' $CONFIG_FILE)
         image_namespace=$(yq e '.cicd.image_namespace // .container.organization // env(GITHUB_REPOSITORY_OWNER)' $CONFIG_FILE)
-        image_name=$(yq e '.cicd.image_name // .container.image // .app.name // "langflow-application"' $CONFIG_FILE)
+        image_name=$(yq e '.cicd.image_name // .container.image // .app.name // "langflow"' $CONFIG_FILE)
         # Construct full repository path
         image_repository="$image_namespace/$image_name"
         source_directory=$(yq e '.cicd.source_directory // "src/"' $CONFIG_FILE)
