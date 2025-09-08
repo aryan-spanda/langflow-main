@@ -33,11 +33,13 @@ RUN apt-get update \
 # Copy backend source and dependencies
 COPY pyproject.toml uv.lock README.md ./
 COPY src/backend/base/pyproject.toml src/backend/base/uv.lock src/backend/base/README.md ./src/backend/base/
+COPY src/lfx/pyproject.toml ./src/lfx/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --frozen --no-install-project --no-editable --extra postgresql
 
 COPY ./src/backend /app/src/backend
+COPY ./src/lfx /app/src/lfx
 
 # Install the backend project
 RUN --mount=type=cache,target=/root/.cache/uv \
