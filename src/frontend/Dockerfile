@@ -51,11 +51,11 @@ RUN mkdir -p /var/cache/nginx/client_temp /var/cache/nginx/proxy_temp /var/cache
 USER frontend
 
 # Expose port
-EXPOSE 3000
+EXPOSE 8080
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+  CMD wget --no-verbose --tries=1 --spider http://localhost:8080/health || exit 1
 
 # Environment variables
 ENV BACKEND_URL=""
