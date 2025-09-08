@@ -381,7 +381,7 @@ jobs:
           echo "✅ Committed updated Helm values for ${{ needs.config.outputs.target_environment }}"
         fi
 
-  # Job 5: Security scanning
+  # Job 5: Security scanning.
   security:
     runs-on: ubuntu-latest
     needs: [config, build]
