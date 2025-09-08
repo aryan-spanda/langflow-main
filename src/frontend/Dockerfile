@@ -5,17 +5,15 @@ FROM node:20-alpine AS builder
 WORKDIR /app
 
 # Copy package files for dependency installation
-COPY package*.json ./
-COPY src/frontend/package*.json ./src/frontend/
+COPY src/frontend/package*.json ./
 
 # Install dependencies
 RUN npm ci
 
 # Copy source code
-COPY src/frontend/ ./src/frontend/
+COPY src/frontend/ ./
 
 # Build the React application
-WORKDIR /app/src/frontend
 RUN npm run build
 
 # Production stage - NGINX
@@ -29,7 +27,7 @@ RUN addgroup -g 1001 -S frontend && \
     adduser -S frontend -u 1001 -G frontend
 
 # Copy built React app from builder stage
-COPY --from=builder --chown=frontend:frontend /app/src/frontend/build /usr/share/nginx/html
+COPY --from=builder --chown=frontend:frontend /app/build /usr/share/nginx/html
 
 # Copy custom NGINX configuration
 COPY --chown=frontend:frontend src/frontend/nginx.conf /etc/nginx/nginx.conf
