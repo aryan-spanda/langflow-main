@@ -300,6 +300,11 @@ jobs:
     needs: [config, build]
     if: needs.config.outputs.should_deploy == 'true'
     steps:
+    - name: Checkout source repository (for Helm charts)
+      uses: actions/checkout@v4
+      with:
+        path: source-repo
+        
     - name: Checkout config repository
       uses: actions/checkout@v4
       with:
@@ -344,8 +349,8 @@ jobs:
         
         # Copy base values if environment-specific file doesn't exist
         if [ ! -f "$values_file" ]; then
-          cp deploy/helm/values-${target_env}.yaml "$values_file" 2>/dev/null || \
-          cp deploy/helm/values.yaml "$values_file"
+          cp source-repo/deploy/helm/values-${target_env}.yaml "$values_file" 2>/dev/null || \
+          cp source-repo/deploy/helm/values.yaml "$values_file"
         fi
         
         # Update image tags for each service
@@ -397,7 +402,11 @@ jobs:
         name: build-info-${{ matrix.service }}
 
     - name: Load build info
-      run: source build-info-${{ matrix.service }}.txt
+      run: |
+        source build-info-${{ matrix.service }}.txt
+        echo "image=$image" >> $GITHUB_ENV
+        echo "service=$service" >> $GITHUB_ENV
+        echo "tag=$tag" >> $GITHUB_ENV
 
     - name: Run Trivy vulnerability scanner
       uses: aquasecurity/trivy-action@master
