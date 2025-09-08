@@ -48,12 +48,12 @@ frontend:
   autoscaling:
     enabled: false
   image:
-    tag: frontend-testing-d2d82b17
+    tag: frontend-testing-d17cc32e
 backend:
   autoscaling:
     enabled: false
   image:
-    tag: backend-testing-d2d82b17
+    tag: backend-testing-d17cc32e
 # Reduced resource requirements for development
 persistence:
   size: 5Gi
