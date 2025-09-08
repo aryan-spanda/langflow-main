@@ -36,14 +36,14 @@ COPY src/backend/base/pyproject.toml src/backend/base/uv.lock src/backend/base/R
 COPY src/lfx/pyproject.toml src/lfx/README.md ./src/lfx/
 
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-editable --extra postgresql
+    uv sync --frozen --no-install-project --no-editable --extra postgresql --no-dev
 
 COPY ./src/backend /app/src/backend
 COPY ./src/lfx /app/src/lfx
 
 # Install the backend project
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-editable --extra postgresql
+    uv sync --frozen --no-editable --extra postgresql --no-dev
 
 ################################
 # RUNTIME
