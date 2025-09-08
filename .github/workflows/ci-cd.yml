@@ -58,7 +58,7 @@ jobs:
         # Read CI/CD configuration from platform-requirements.yml
         app_name=$(yq e '.app.name // "langflow"' $CONFIG_FILE)
         registry_host=$(yq e '.cicd.registry_host // .container.registry // "docker.io"' $CONFIG_FILE)
-        image_namespace=$(yq e '.cicd.image_namespace // .container.organization // env(GITHUB_REPOSITORY_OWNER)' $CONFIG_FILE)
+        image_namespace=$(yq e '.cicd.image_namespace // .container.organization // "'"$GITHUB_REPOSITORY_OWNER"'"' $CONFIG_FILE)
         image_name=$(yq e '.cicd.image_name // .container.image // .app.name // "langflow"' $CONFIG_FILE)
         # Construct full repository path
         image_repository="$image_namespace/$image_name"
@@ -88,6 +88,8 @@ jobs:
         echo "  Full Image Path: $registry_host/$image_repository"
         echo "  Source Dir: $source_directory"
         echo "  Deployment Branches: $deployment_branches"
+        echo "  Registry Username Secret: $registry_username_secret"
+        echo "  Registry Password Secret: $registry_password_secret"
         echo "  Tagging Format: $tagging_format"
         
     - name: Check deployment conditions
@@ -234,7 +236,15 @@ jobs:
         
         registry="${{ needs.config.outputs.registry_host }}"
         repository="${{ needs.config.outputs.image_repository }}"
-        full_image_name="$registry/$repository:$tag"
+        
+        # Construct full image name properly for Docker Hub
+        if [ "$registry" = "docker.io" ] || [ "$registry" = "" ]; then
+          # For Docker Hub, don't include registry prefix
+          full_image_name="$repository:$tag"
+        else
+          # For other registries, include the registry prefix
+          full_image_name="$registry/$repository:$tag"
+        fi
         
         echo "service=$service" >> $GITHUB_OUTPUT
         echo "tag=$tag" >> $GITHUB_OUTPUT
@@ -242,6 +252,8 @@ jobs:
         
         echo "Service: $service"
         echo "Tag: $tag"
+        echo "Registry: $registry"
+        echo "Repository: $repository"
         echo "Full image: $full_image_name"
 
     - name: Build and push Docker image
