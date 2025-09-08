@@ -1,7 +1,6 @@
 # Development environment overrides
 app:
   environment: "development"
-
 # Frontend configuration for development
 frontend:
   replicaCount: 1
@@ -18,7 +17,6 @@ frontend:
     NODE_ENV: "development"
     VITE_API_URL: "http://langflow-backend-dev:80"
     VITE_WS_URL: "ws://langflow-backend-dev:80"
-
 # Backend configuration for development
 backend:
   replicaCount: 1
@@ -34,7 +32,6 @@ backend:
   env:
     LANGFLOW_LOG_LEVEL: "DEBUG"
     LANGFLOW_DATABASE_URL: "sqlite:///./langflow-dev.db"
-
 # Enable ingress for development
 ingress:
   enabled: true
@@ -44,23 +41,22 @@ ingress:
     nginx.ingress.kubernetes.io/rewrite-target: /
     nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
     nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
-
 # Disable autoscaling in development
 autoscaling:
   enabled: false
-
 frontend:
   autoscaling:
     enabled: false
-
+  image:
+    tag: frontend-testing-cb0ac53b
 backend:
   autoscaling:
     enabled: false
-
+  image:
+    tag: backend-testing-cb0ac53b
 # Reduced resource requirements for development
 persistence:
   size: 5Gi
-
 # Environment variables
 env:
   LOG_LEVEL: debug
