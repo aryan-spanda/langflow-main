@@ -294,24 +294,17 @@ jobs:
         name: build-info-${{ matrix.service }}
         path: build-info-${{ matrix.service }}.txt
 
-  # Job 4: Deploy to environment
-  deploy:
+  # Job 4: Update Helm values for ArgoCD Image Updater (Testing Branch Integration)
+  update-helm-values:
     runs-on: ubuntu-latest
     needs: [config, build]
     if: needs.config.outputs.should_deploy == 'true'
     steps:
-    - name: Checkout source repository (for Helm charts)
+    - name: Checkout code
       uses: actions/checkout@v4
       with:
-        path: source-repo
-        
-    - name: Checkout config repository
-      uses: actions/checkout@v4
-      with:
-        repository: aryan-spanda/Spanda-config
         token: ${{ secrets.GITHUB_TOKEN }}
-        path: config-repo
-
+        
     - name: Download build info
       uses: actions/download-artifact@v4
       with:
@@ -322,67 +315,70 @@ jobs:
       run: |
         sudo wget -qO /usr/local/bin/yq https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64
         sudo chmod +x /usr/local/bin/yq
-
-    - name: Update Helm values with new image tags
+        
+    - name: Update Helm values for testing environment
       run: |
         app_name="${{ needs.config.outputs.app_name }}"
         target_env="${{ needs.config.outputs.target_environment }}"
         
-        # Create application directory if it doesn't exist
-        mkdir -p config-repo/applications/$app_name
+        echo "🔄 Updating Helm values for $target_env environment..."
         
         # Determine values file based on environment
         case "$target_env" in
           "development")
-            values_file="config-repo/applications/$app_name/values-dev.yaml"
+            HELM_VALUES_FILE="deploy/helm/values-dev.yaml"
             ;;
           "staging")
-            values_file="config-repo/applications/$app_name/values-staging.yaml"
+            HELM_VALUES_FILE="deploy/helm/values-staging.yaml"
             ;;
           "production")
-            values_file="config-repo/applications/$app_name/values-production.yaml"
+            HELM_VALUES_FILE="deploy/helm/values-production.yaml"
             ;;
           *)
-            values_file="config-repo/applications/$app_name/values-dev.yaml"
+            HELM_VALUES_FILE="deploy/helm/values-dev.yaml"
             ;;
         esac
         
-        # Copy base values if environment-specific file doesn't exist
-        if [ ! -f "$values_file" ]; then
-          cp source-repo/deploy/helm/values-${target_env}.yaml "$values_file" 2>/dev/null || \
-          cp source-repo/deploy/helm/values.yaml "$values_file"
+        echo "Using values file: $HELM_VALUES_FILE"
+        
+        # Ensure values file exists
+        if [[ ! -f "$HELM_VALUES_FILE" ]]; then
+          echo "Values file doesn't exist, copying from base values.yaml..."
+          cp deploy/helm/values.yaml "$HELM_VALUES_FILE"
         fi
         
-        # Update image tags for each service
+        # Update image tags for each service from build info
         for service_file in build-info-*.txt; do
           if [ -f "$service_file" ]; then
             source "$service_file"
             echo "Updating $service with tag: $tag"
             
             # Update the image tag in values file
-            yq e ".${service}.image.tag = \"$tag\"" -i "$values_file"
+            yq e ".${service}.image.tag = \"$tag\"" -i "$HELM_VALUES_FILE"
+            
+            echo "Updated $service -> tag: $tag"
           fi
         done
         
-        echo "Updated values file: $values_file"
-        cat "$values_file"
-
-    - name: Commit and push changes
+        echo "Updated values file: $HELM_VALUES_FILE"
+        cat "$HELM_VALUES_FILE"
+        
+    - name: Commit updated Helm values
       run: |
-        cd config-repo
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        git add .
         
-        if git diff --staged --quiet; then
+        # Check if there are any changes to commit
+        if git diff --quiet deploy/helm/values-*.yaml; then
           echo "No changes to commit"
         else
-          git commit -m "🚀 Deploy ${{ needs.config.outputs.app_name }} to ${{ needs.config.outputs.target_environment }}
+          git add deploy/helm/values-*.yaml
+          git commit -m "🚀 Update image tags for ${{ needs.config.outputs.target_environment }} - ${{ github.sha }}
           
           Updated image tags:
-          $(cat ../build-info-*.txt 2>/dev/null | grep -E '^(service|tag)=' | sed 's/^/  - /')"
+          $(cat build-info-*.txt 2>/dev/null | grep -E '^(service|tag)=' | sed 's/^/  - /')"
           git push
-          echo "Changes pushed to config repository"
+          echo "✅ Committed updated Helm values for ${{ needs.config.outputs.target_environment }}"
         fi
 
   # Job 5: Security scanning
