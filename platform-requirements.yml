@@ -277,29 +277,57 @@ observability:
 # Define which Spanda platform modules this application requires
 # Modules will be deployed as part of the tenant infrastructure
 modules:
-  - name: "minio"
+  - name: "data-lake-baremetal"
     enabled: true
-    description: "Object storage for data lake and file storage"
+    description: "Complete data lake platform with MinIO, Spark, Dremio, and streaming components"
     
-  - name: "spark"
+  - name: "data-management-complete"
     enabled: true
-    description: "Distributed computing engine for data processing"
+    description: "Complete data management and governance platform"
     
-  - name: "dremio"
+  - name: "monitoring-prometheus"
     enabled: true
-    description: "Data lakehouse platform for analytics"
+    description: "Prometheus-based monitoring and metrics collection"
     
-  - name: "kafka"
-    enabled: false
-    description: "Streaming platform for real-time data pipelines"
+  - name: "net-address-baremetal"
+    enabled: true
+    description: "Network address management for bare metal deployments"
     
-  - name: "nifi"
-    enabled: false
-    description: "Data flow automation and processing"
+  - name: "net-firewall-baremetal"
+    enabled: true
+    description: "Network firewall configuration for bare metal"
     
-  - name: "nessie"
-    enabled: false
-    description: "Git-like data catalog for data lake tables"
+  - name: "net-lb-app-external-baremetal"
+    enabled: true
+    description: "External application load balancer for bare metal"
+    
+  - name: "net-lb-app-internal-baremetal"
+    enabled: true
+    description: "Internal application load balancer for bare metal"
+    
+  - name: "net-lb-baremetal"
+    enabled: true
+    description: "Core load balancer module for bare metal"
+    
+  - name: "net-vpc-baremetal"
+    enabled: true
+    description: "Virtual private cloud networking for bare metal"
+    
+  - name: "realtime-bi-baremetal"
+    enabled: true
+    description: "Real-time business intelligence and analytics platform"
+    
+  - name: "security-cert-manager"
+    enabled: true
+    description: "Certificate management and SSL/TLS automation"
+    
+  - name: "security-vault"
+    enabled: true
+    description: "HashiCorp Vault for secrets management"
+    
+  - name: "traditional-bi-baremetal"
+    enabled: true
+    description: "Traditional business intelligence and reporting platform"
 
 # Section 8: Security Configuration
 # ---------------------------------------------------------------------
