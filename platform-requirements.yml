@@ -272,7 +272,36 @@ observability:
     enabled: true
     slack_webhook_secret: "SLACK_WEBHOOK_URL"
     
-# Section 6: Security Configuration
+# Section 7: Platform Modules Configuration
+# ---------------------------------------------------------------------
+# Define which Spanda platform modules this application requires
+# Modules will be deployed as part of the tenant infrastructure
+modules:
+  - name: "minio"
+    enabled: true
+    description: "Object storage for data lake and file storage"
+    
+  - name: "spark"
+    enabled: true
+    description: "Distributed computing engine for data processing"
+    
+  - name: "dremio"
+    enabled: true
+    description: "Data lakehouse platform for analytics"
+    
+  - name: "kafka"
+    enabled: false
+    description: "Streaming platform for real-time data pipelines"
+    
+  - name: "nifi"
+    enabled: false
+    description: "Data flow automation and processing"
+    
+  - name: "nessie"
+    enabled: false
+    description: "Git-like data catalog for data lake tables"
+
+# Section 8: Security Configuration
 # ---------------------------------------------------------------------
 security:
   # Pod Security
