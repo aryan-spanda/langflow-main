@@ -282,51 +282,51 @@ modules:
     description: "Complete data lake platform with MinIO, Spark, Dremio, and streaming components"
     
   - name: "data-management-complete"
-    enabled: true
+    enabled: false
     description: "Complete data management and governance platform"
     
   - name: "monitoring-prometheus"
-    enabled: true
+    enabled: false
     description: "Prometheus-based monitoring and metrics collection"
     
   - name: "net-address-baremetal"
-    enabled: true
+    enabled: false
     description: "Network address management for bare metal deployments"
     
   - name: "net-firewall-baremetal"
-    enabled: true
+    enabled: false
     description: "Network firewall configuration for bare metal"
     
   - name: "net-lb-app-external-baremetal"
-    enabled: true
+    enabled: false
     description: "External application load balancer for bare metal"
     
   - name: "net-lb-app-internal-baremetal"
-    enabled: true
+    enabled: false
     description: "Internal application load balancer for bare metal"
     
   - name: "net-lb-baremetal"
-    enabled: true
+    enabled: false
     description: "Core load balancer module for bare metal"
     
   - name: "net-vpc-baremetal"
-    enabled: true
+    enabled: false
     description: "Virtual private cloud networking for bare metal"
     
   - name: "realtime-bi-baremetal"
-    enabled: true
+    enabled: false
     description: "Real-time business intelligence and analytics platform"
     
   - name: "security-cert-manager"
-    enabled: true
+    enabled: false
     description: "Certificate management and SSL/TLS automation"
     
   - name: "security-vault"
-    enabled: true
+    enabled: false
     description: "HashiCorp Vault for secrets management"
     
   - name: "traditional-bi-baremetal"
-    enabled: true
+    enabled: false
     description: "Traditional business intelligence and reporting platform"
 
 # Section 8: Security Configuration
