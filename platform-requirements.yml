@@ -17,7 +17,7 @@ app:
   team: "ai-team"
   # TENANT CONFIGURATION - REQUIRED FOR MULTI-TENANT DEPLOYMENTS
   tenant: "langflow"  # Maps to ArgoCD project and tenant namespaces
-  git_org: "aryan-spanda"  # GitHub organization for tenant isolation and RBAC
+  git_org: "aryan-spanda"  # GitHub organization for tenant isolation and RBAC, could be anything, just for isolation.
 
 # Section 1.1: Microservices Configuration (Auto-Discovery)
 # ---------------------------------------------------------------------
