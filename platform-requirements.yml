@@ -13,33 +13,33 @@ app:
   name: "langflow"
   repoURL: "https://github.com/aryan-spanda/langflow-main.git"
   chartPath: "deploy/helm"
-  type: "fullstack"
-  team: "ai-team"
+  type: "fullstack" # REDUNDANT - remove later
+  team: "ai-team" # REMOVE - not used
   # TENANT CONFIGURATION - REQUIRED FOR MULTI-TENANT DEPLOYMENTS
-  tenant: "langflow"  # Maps to ArgoCD project and tenant namespaces
-  git_org: "aryan-spanda"  # GitHub organization for tenant isolation and RBAC, could be anything, just for isolation.
+  tenant: "langflow" # Maps to ArgoCD project and tenant namespaces
+  git_org: "aryan-spanda" # GitHub organization for tenant isolation and RBAC, could be anything, just for isolation.
 
 # Section 1.1: Microservices Configuration (Auto-Discovery)
 # ---------------------------------------------------------------------
 # The platform will automatically discover microservices by scanning src/ directory
 # for subdirectories containing Dockerfiles. You can override this behavior by 
 # explicitly defining microservices below:
-# 
+#
 microservices:
-  - name: "frontend"
-    dockerfile: "src/frontend/Dockerfile"
-    port: 3000
-  - name: "backend"  
-    dockerfile: "src/backend/Dockerfile"
-    port: 7860
+- name: "frontend"
+  dockerfile: "src/frontend/Dockerfile"
+  port: 3000 # remove this - defined in values.yaml
+- name: "backend"
+  dockerfile: "src/backend/Dockerfile"
+  port: 7860 # remove this - defined in values.yaml
 #
 # If not specified, auto-discovery will find all src/*/Dockerfile patterns
 # Auto-discovery is recommended for most use cases
-  
+
 # Section 1.1: Container Registry Configuration
 # ---------------------------------------------------------------------
 container:
-  registry: ""  # Empty for Docker Hub (docker.io is default)
+  registry: "" # Empty for Docker Hub (docker.io is default)
   organization: "aryanpola"
   image: "langflow" #docker repo name
 
@@ -50,10 +50,10 @@ environments:
   development:
     enabled: true
     namespace: "langflow-dev"
-    branches: 
-      - "testing"
-      - "develop"
-    
+    branches:
+    - "testing"
+    - "develop"
+
     # ArgoCD Application Config
     argocd:
       project: "langflow"
@@ -62,7 +62,7 @@ environments:
         automated:
           prune: true
           selfHeal: true
-          
+
     # Helm Values Overrides
     values:
       app:
@@ -90,9 +90,9 @@ environments:
   staging:
     enabled: true
     namespace: "langflow-staging"
-    branches: 
-      - "staging"
-    
+    branches:
+    - "staging"
+
     # ArgoCD Application Config
     argocd:
       project: "langflow"
@@ -101,7 +101,7 @@ environments:
         automated:
           prune: false
           selfHeal: false
-          
+
     # Helm Values Overrides
     values:
       app:
@@ -127,11 +127,11 @@ environments:
 
   # Production Environment - Manual deployment from main branch
   production:
-    enabled: false  # Disabled initially, enable when ready for production
+    enabled: false # Disabled initially, enable when ready for production
     namespace: "langflow-prod"
-    branches: 
-      - "main"
-    
+    branches:
+    - "main"
+
     # ArgoCD Application Config
     argocd:
       project: "langflow"
@@ -140,7 +140,7 @@ environments:
         automated:
           prune: false
           selfHeal: false
-          
+
     # Helm Values Overrides
     values:
       app:
@@ -171,43 +171,43 @@ cicd:
   auto_deploy:
     enabled: true
     branches:
-      - "testing"
-      - "develop"
-      - "staging"
-      
+    - "testing"
+    - "develop"
+    - "staging"
+
   # Build Configuration
   build:
     # Use platform's automatic microservice discovery
     microservices_auto_discovery: true
-    
+
     # Source directory for microservices
     source_directory: "src/"
-    
+
     # Container Registry Credentials (GitHub Secrets)
     registry_credentials:
       username_secret: "DOCKERHUB_USERNAME"
       password_secret: "DOCKERHUB_TOKEN"
-    
+
     # Tagging Strategy
     tagging:
-      format: "branch-commit"  # Options: branch-commit, semantic, latest
-      
+      format: "branch-commit" # Options: branch-commit, semantic, latest
+
   # Testing Configuration
   testing:
     enabled: true
     parallel_execution: true
     fail_fast: false
-    
+
     # Test Coverage Requirements
     coverage:
       enabled: true
       minimum_threshold: 70
-      
+
   # Security Scanning
   security:
     container_scanning: true
     dependency_scanning: true
-    
+
   # GitOps Integration
   gitops:
     enabled: true
@@ -226,27 +226,27 @@ infrastructure:
     min_memory: "2Gi"
     max_cpu: "4"
     max_memory: "8Gi"
-    
+
   # Storage Requirements  
   storage:
     persistent_volumes:
-      - name: "langflow-data"
-        size: "10Gi"
-        access_mode: "ReadWriteOnce"
-        storage_class: "fast-ssd"
-        
+    - name: "langflow-data"
+      size: "10Gi"
+      access_mode: "ReadWriteOnce"
+      storage_class: "fast-ssd"
+
   # Network Requirements
   networking:
     ingress_required: true
     load_balancer: false
     service_mesh: false
-    
+
   # External Dependencies
   dependencies:
     databases: []
     message_queues: []
     external_apis: []
-    
+
 # Section 5: Monitoring & Observability
 # ---------------------------------------------------------------------
 observability:
@@ -255,80 +255,80 @@ observability:
     enabled: true
     prometheus: true
     custom_metrics: []
-    
+
   # Logging
   logging:
     enabled: true
     level: "info"
     structured: true
-    
+
   # Health Checks
   health_checks:
     liveness_probe: true
     readiness_probe: true
     startup_probe: true
-    
+
   # Alerts
   alerting:
     enabled: true
     slack_webhook_secret: "SLACK_WEBHOOK_URL"
-    
+
 # Section 7: Platform Modules Configuration
 # ---------------------------------------------------------------------
 # Define which Spanda platform modules this application requires
 # Modules will be deployed as part of the tenant infrastructure
 modules:
-  - name: "data-lake-baremetal"
-    enabled: true
-    description: "Complete data lake platform with MinIO, Spark, Dremio, and streaming components"
-    
-  - name: "data-management-complete"
-    enabled: false
-    description: "Complete data management and governance platform"
-    
-  - name: "monitoring-prometheus"
-    enabled: false
-    description: "Prometheus-based monitoring and metrics collection"
-    
-  - name: "net-address-baremetal"
-    enabled: false
-    description: "Network address management for bare metal deployments"
-    
-  - name: "net-firewall-baremetal"
-    enabled: false
-    description: "Network firewall configuration for bare metal"
-    
-  - name: "net-lb-app-external-baremetal"
-    enabled: false
-    description: "External application load balancer for bare metal"
-    
-  - name: "net-lb-app-internal-baremetal"
-    enabled: false
-    description: "Internal application load balancer for bare metal"
-    
-  - name: "net-lb-baremetal"
-    enabled: false
-    description: "Core load balancer module for bare metal"
-    
-  - name: "net-vpc-baremetal"
-    enabled: false
-    description: "Virtual private cloud networking for bare metal"
-    
-  - name: "realtime-bi-baremetal"
-    enabled: false
-    description: "Real-time business intelligence and analytics platform"
-    
-  - name: "security-cert-manager"
-    enabled: false
-    description: "Certificate management and SSL/TLS automation"
-    
-  - name: "security-vault"
-    enabled: false
-    description: "HashiCorp Vault for secrets management"
-    
-  - name: "traditional-bi-baremetal"
-    enabled: false
-    description: "Traditional business intelligence and reporting platform"
+- name: "data-lake-baremetal"
+  enabled: true
+  description: "Complete data lake platform with MinIO, Spark, Dremio, and streaming components"
+
+- name: "data-management-complete"
+  enabled: false
+  description: "Complete data management and governance platform"
+
+- name: "monitoring-prometheus"
+  enabled: false
+  description: "Prometheus-based monitoring and metrics collection"
+
+- name: "net-address-baremetal"
+  enabled: false
+  description: "Network address management for bare metal deployments"
+
+- name: "net-firewall-baremetal"
+  enabled: false
+  description: "Network firewall configuration for bare metal"
+
+- name: "net-lb-app-external-baremetal"
+  enabled: false
+  description: "External application load balancer for bare metal"
+
+- name: "net-lb-app-internal-baremetal"
+  enabled: false
+  description: "Internal application load balancer for bare metal"
+
+- name: "net-lb-baremetal"
+  enabled: false
+  description: "Core load balancer module for bare metal"
+
+- name: "net-vpc-baremetal"
+  enabled: false
+  description: "Virtual private cloud networking for bare metal"
+
+- name: "realtime-bi-baremetal"
+  enabled: false
+  description: "Real-time business intelligence and analytics platform"
+
+- name: "security-cert-manager"
+  enabled: false
+  description: "Certificate management and SSL/TLS automation"
+
+- name: "security-vault"
+  enabled: false
+  description: "HashiCorp Vault for secrets management"
+
+- name: "traditional-bi-baremetal"
+  enabled: false
+  description: "Traditional business intelligence and reporting platform"
 
 # Section 8: Security Configuration
 # ---------------------------------------------------------------------
@@ -338,13 +338,13 @@ security:
     run_as_non_root: true
     read_only_root_filesystem: false
     allow_privilege_escalation: false
-    
+
   # Network Policies
   network_policies:
     enabled: true
     ingress_rules: []
     egress_rules: []
-    
+
   # Secrets Management
   secrets:
     external_secrets: false
